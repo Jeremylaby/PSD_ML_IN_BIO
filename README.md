@@ -1,4 +1,90 @@
 # PSD_ML_IN_BIO
+
+## Setup and shared data (DVC + Azure)
+
+After cloning the repository, run the following commands from its root directory.
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first if needed.
+
+```sh
+uv sync
+```
+
+This installs the project dependencies, including DVC with Azure support and tqdm.
+Python 3.13 or newer is required.
+
+### Configure access to Azure
+
+DVC is already initialized in this repository. The shared `.dvc/config` defines:
+
+- Default remote: `storage`
+- Storage account: `psdmlinbio2026`
+- Blob container: `dvc` (`azure://dvc`)
+
+Do not run `dvc init` or add the remote again after cloning. Get the Azure storage
+account access key from the project owner privately, then configure it locally:
+
+```sh
+uv run dvc remote modify --local storage account_key 'YOUR_AZURE_STORAGE_ACCOUNT_KEY'
+```
+
+Replace the placeholder with the access key, not a connection string or SAS token.
+The `--local` flag stores the key in `.dvc/config.local`, which is ignored by Git.
+Never commit the key or paste it into the README or `.dvc/config`.
+
+See the [DVC Azure authentication documentation](https://doc.dvc.org/user-guide/data-management/remote-storage/azure-blob-storage).
+
+### Download the shared dataset
+
+Once the project owner has uploaded the data, run:
+
+```sh
+uv run dvc pull
+```
+
+This restores the version of `data/` referenced by `data.dvc`. To get an updated
+dataset later, run `git pull` followed by `uv run dvc pull`.
+
+### Download structures from PDB
+
+To download the structures directly from PDB instead, run:
+
+```sh
+uv run python utils/download_structures.py
+```
+
+To download only one split:
+
+```sh
+uv run python utils/download_structures.py train
+```
+
+The script reads IDs from `splited_protein_ids/` and saves whole PDB structures to
+`data/protein_data/{train,eval,test}/`. Multiple entity IDs pointing to the same
+PDB entry are downloaded once per split. The tqdm bar shows downloaded, skipped,
+and failed files.
+
+Existing nonempty `.cif` files are skipped. Press `Ctrl+C` to interrupt and rerun
+the same command to continue. An interrupted file is downloaded again from the
+beginning; temporary `.part` files are not treated as completed downloads.
+Failed files are reported and can be retried by rerunning the command.
+
+### Upload a new dataset version
+
+After downloading or changing data, publish it to Azure and record its version:
+
+```sh
+uv run dvc add data
+uv run dvc push
+git add data.dvc .gitignore .dvc/config
+git commit -m "Update protein dataset"
+git push
+```
+
+Commit the project code and dependency files as usual. Git stores code, ID lists,
+and DVC metadata; Azure stores the contents of `data/`.
+
+## Original assignment and reference snippets
+
 Protein structure prediction
 Download protein clusters from https://cdn.rcsb.org/resources/sequence/clusters/clusters-by-entity-50.txt (one cluster per line; note that in a realistic scenario we would use 30% sequence identity clustering)
 Consider clusters coming from specific source:

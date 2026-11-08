@@ -1550,10 +1550,14 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "dvc", extra = ["azure"] },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "dvc", extras = ["azure"], specifier = ">=3.67.1" }]
+requires-dist = [
+    { name = "dvc", extras = ["azure"], specifier = ">=3.67.1" },
+    { name = "tqdm", specifier = ">=4.67.1" },
+]
 
 [[package]]
 name = "psutil"

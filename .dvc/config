@@ -1,0 +1,6 @@
+[core]
+    remote = storage
+    autostage = true
+['remote "storage"']
+    url = azure://dvc
+    account_name = psdmlinbio2026
