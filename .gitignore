@@ -1,0 +1,41 @@
+# --- Data (versioned with DVC, see data.dvc) ---------------------------------
+# The whole data/ folder (CIF structures, FASTA files) lives in Azure via DVC.
+# Git only keeps data.dvc, which points to the right data version.
+/data/
+
+# Structure files anywhere else in the repo are too big for Git
+*.cif
+*.cif.gz
+*.mmcif
+*.ent.gz
+# Half-finished downloads from utils/download_structures.py
+*.part
+
+# --- Prediction runs -----------------------------------------------------------
+outputs/
+# Stray predictions written with -o in the repo root
+/*.pdb
+/*.info.json
+
+# --- Python caches and environments --------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+dist/
+
+# --- Editors and OS -------------------------------------------------------------
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- Secrets ----------------------------------------------------------------------
+.env
+# DVC keeps the Azure key in .dvc/config.local (ignored by .dvc/.gitignore)

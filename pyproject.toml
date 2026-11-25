@@ -5,6 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "biopython>=1.88",
     "dvc[azure]>=3.67.1",
+    "numpy>=2.5.5",
+    "scikit-bio>=0.7.4",
+    "torch>=2.15.0",
     "tqdm>=4.67.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

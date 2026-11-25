@@ -68,6 +68,19 @@ the same command to continue. An interrupted file is downloaded again from the
 beginning; temporary `.part` files are not treated as completed downloads.
 Failed files are reported and can be retried by rerunning the command.
 
+### Extract sequences to FASTA
+
+```sh
+uv run python utils/cif_to_fasta.py        # or: ... test
+```
+
+For every ID in `splited_protein_ids/{split}.txt` (e.g. `10ZN_1` = entry 10ZN,
+entity 1) the script takes the full canonical sequence of that entity
+(`_entity_poly.pdbx_seq_one_letter_code_can`, modified residues mapped to their
+standard parent) from `data/protein_data/{split}/{PDB}.cif` and writes
+`data/fasta/{split}.fasta`. Only the file header is parsed, the coordinates are
+skipped. A full run takes about 5 minutes.
+
 ### Upload a new dataset version
 
 After downloading or changing data, publish it to Azure and record its version:
@@ -82,6 +95,78 @@ git push
 
 Commit the project code and dependency files as usual. Git stores code, ID lists,
 and DVC metadata; Azure stores the contents of `data/`.
+
+## Structure predictor template
+
+`predictor/` contains a template predictor: it reads a multi-protein FASTA file
+(parsed with `skbio.io.read()`), runs a dummy PyTorch model and writes a PDB file
+with one CA `ATOM` record per residue, one `MODEL` block per protein.
+
+```sh
+uv run python -m predictor.predict examples/example.fasta --seed 0
+```
+
+Each run is saved to its own folder (`outputs/` is ignored by Git):
+
+```
+outputs/run_<timestamp>/
+  predicted.pdb   # CA-only structure, one MODEL per protein
+  info.json       # run metadata
+```
+
+`info.json` stores the input file, parameters (`max_len`, `batch_size`, `seed`;
+when no `--seed` is given a random one is drawn and recorded, so every run can
+be repeated), Python/torch versions and one entry per protein:
+
+- indices: `fasta_index` (position in the input FASTA, from 0), `pdb_model`
+  (number of its `MODEL` block, from 1), `batch_index`, `position_in_batch`;
+- lengths: `sequence_length`, `processed_length` (CA atoms written), `truncated`;
+- `source`: for IDs from `splited_protein_ids/splits.tsv` the split, sequence
+  cluster, PDB entry, entity, local CIF file and RCSB link; for other sequences
+  only `{"in_dataset": false}`.
+
+Use `-o file.pdb` to write somewhere else; the metadata then goes to
+`file.info.json`.
+
+Options: `--max-len` (D, default 1024), `--batch-size` (B, default 16), `--seed`,
+`--outputs-dir` (default `outputs`).
+
+To predict all proteins of one split, pass its FASTA file (see
+[Extract sequences to FASTA](#extract-sequences-to-fasta)):
+
+```sh
+uv run python -m predictor.predict data/fasta/test.fasta
+```
+
+### Single protein
+
+`scripts/predict_single.sh` finds one protein ID in `data/fasta/` and predicts
+only that protein:
+
+```sh
+scripts/predict_single.sh 7ZX8_2                 # search train, eval and test
+scripts/predict_single.sh 7ZX8_2 test            # search only the test split
+scripts/predict_single.sh 7ZX8_2 -- --seed 0     # options after -- go to the predictor
+```
+
+The ID must match the FASTA header exactly (`7ZX8_2`, not `7ZX8`). The result is
+saved like any other run, in `outputs/run_<timestamp>/predicted.pdb`. A relative
+`-o` path is resolved from the repository root. The script exits with code 1
+when the ID is not found.
+
+- `predictor/vocab.py` - 22-token vocabulary (20 amino acids, `X`, `PAD`) and
+  one-hot encoding to shape `(B, D, N)` with a `(B, D)` padding mask. Longer
+  sequences are truncated to D, non-standard residues map to `X` (`UNK` in PDB).
+- `predictor/model.py` - `DummyStructureModel`, returns random coordinates of
+  shape `(B, D, 3)` with padded positions zeroed; `predict()` gives one `(L, 3)`
+  tensor per sequence, `L = min(len, D)`.
+- `predictor/pdb_writer.py` - fixed-column ATOM records per the wwPDB v3.3 spec.
+
+Run the tests with:
+
+```sh
+uv run pytest
+```
 
 ## Original assignment and reference snippets
 
