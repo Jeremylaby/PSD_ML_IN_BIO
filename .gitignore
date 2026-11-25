@@ -1,7 +1,7 @@
 # --- Data (versioned with DVC, see data.dvc) ---------------------------------
 # The whole data/ folder (CIF structures, FASTA files) lives in Azure via DVC.
 # Git only keeps data.dvc, which points to the right data version.
-/data/
+/data/protein_data/
 
 # Structure files anywhere else in the repo are too big for Git
 *.cif
